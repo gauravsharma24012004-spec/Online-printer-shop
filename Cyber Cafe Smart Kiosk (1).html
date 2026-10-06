@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Cyber Cafe Kiosk & Print System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Hind', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 min-h-screen flex flex-col antialiased">
+
+    <!-- Navigation Header -->
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40 no-print">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-brand-500 text-white p-2.5 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/20">
+                    <i class="fa-solid fa-print text-xl"></i>
+                </div>
+                <div>
+                    <h1 id="headerShopName" class="text-base md:text-lg font-bold leading-tight">डिजिटल प्रिंट सेंटर</h1>
+                    <p class="text-[11px] text-slate-400">Self-Service Scan, Pay & Instant Print Portal</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <!-- Admin Lock/Access Button -->
+                <button onclick="requestAdminAccess()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs md:text-sm px-3 py-2 rounded-xl border border-slate-700 transition flex items-center space-x-2">
+                    <i class="fa-solid fa-sliders text-brand-500"></i>
+                    <span id="adminBtnText" class="hidden sm:inline">रेट एवं सेटिंग्स (Rates & Admin)</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 no-print">
+        
+        <!-- Customer View Section -->
+        <div id="customerView" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left Side: File Upload & Live Preview -->
+            <div class="lg:col-span-7 flex flex-col gap-6">
+                
+                <!-- Upload Box -->
+                <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full bg-brand-100 text-brand-700 text-xs flex items-center justify-center font-black">1</span>
+                            फ़ाइल अपलोड करें (Upload File)
+                        </h2>
+                        <span class="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">Aadhaar, PDF, Photo</span>
+                    </div>
+                    
+                    <div id="dropZone" onclick="document.getElementById('fileInput').click()" 
+                         class="border-2 border-dashed border-slate-300 hover:border-brand-500 bg-slate-50 hover:bg-brand-50/20 transition-all rounded-xl p-6 md:p-8 text-center cursor-pointer relative group">
+                        <input type="file" id="fileInput" class="hidden" accept="image/*,.pdf" onchange="handleFileSelect(event)">
+                        
+                        <div id="uploadPlaceholder" class="space-y-3">
+                            <div class="w-12 h-12 md:w-14 md:h-14 bg-brand-50 text-brand-600 rounded-2xl flex items-center justify-center mx-auto transition transform group-hover:scale-110">
+                                <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-slate-700">आधार, मार्कशीट या PDF चुनने के लिए टैप करें</p>
+                                <p class="text-xs text-slate-400 mt-0.5">Tap here to choose PDF, JPG or PNG file</p>
+                            </div>
+                        </div>
+
+                        <!-- Uploaded File Badge -->
+                        <div id="fileInfoBox" class="hidden flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="flex items-center space-x-3 overflow-hidden">
+                                <div class="w-10 h-10 bg-brand-50 text-brand-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <i id="fileIcon" class="fa-solid fa-file-text text-xl"></i>
+                                </div>
+                                <div class="text-left truncate">
+                                    <p id="fileName" class="text-sm font-bold text-slate-800 truncate">document.pdf</p>
+                                    <p id="fileDetails" class="text-xs text-slate-500">1 Page • 1.2 MB</p>
+                                </div>
+                            </div>
+                            <button onclick="event.stopPropagation(); removeFile()" class="text-slate-400 hover:text-red-500 p-2 text-sm transition">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Document Preview -->
+                <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200 flex-grow flex flex-col">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-eye text-brand-600"></i>
+                            प्रिंट प्रिव्यू (Live Preview)
+                        </h2>
+                        <span id="pageCountBadge" class="text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md font-semibold">
+                            Total Pages: 0
+                        </span>
+                    </div>
+
+                    <div id="previewContainer" class="flex-grow min-h-[260px] bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center p-4 overflow-hidden relative">
+                        <div id="emptyPreviewText" class="text-center text-slate-400 py-8">
+                            <i class="fa-regular fa-images text-4xl mb-2 text-slate-300"></i>
+                            <p class="text-xs font-medium">फ़ाइल चुनने के बाद प्रिव्यू यहाँ दिखेगा</p>
+                        </div>
+                        
+                        <!-- Image Preview -->
+                        <img id="imagePreview" class="hidden max-h-[320px] w-auto object-contain rounded-lg shadow-md transition-all" alt="Preview">
+                        
+                        <!-- PDF Indicator Preview -->
+                        <div id="pdfPreview" class="hidden text-center p-6 bg-white rounded-2xl shadow-md border border-slate-200 max-w-sm">
+                            <div class="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                <i class="fa-solid fa-file-pdf text-3xl"></i>
+                            </div>
+                            <h3 id="pdfName" class="font-bold text-slate-800 text-sm truncate">Document.pdf</h3>
+                            <p id="pdfPages" class="text-xs text-slate-500 mt-1">Multi-page document ready for print</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Print Setup Options -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+                <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
+                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
+                        <span class="w-6 h-6 rounded-full bg-brand-100 text-brand-700 text-xs flex items-center justify-center font-black">2</span>
+                        प्रिंट सेटिंग्स (Print Setup)
+                    </h2>
+
+                    <!-- Color Mode Selection -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">रंग चुनें (Color Mode)</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="colorMode" value="bw" checked onchange="calculatePrice()" class="peer hidden">
+                                <div class="p-3 border-2 border-slate-200 rounded-xl peer-checked:border-brand-600 peer-checked:bg-brand-50/40 text-center transition">
+                                    <i class="fa-solid fa-circle-half-stroke text-slate-700 text-base mb-1 block"></i>
+                                    <span class="text-xs font-bold block text-slate-800">Black & White</span>
+                                    <span id="rateLabelBW" class="text-[10px] text-slate-500">₹3 / पेज</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="colorMode" value="color" onchange="calculatePrice()" class="peer hidden">
+                                <div class="p-3 border-2 border-slate-200 rounded-xl peer-checked:border-brand-600 peer-checked:bg-brand-50/40 text-center transition">
+                                    <i class="fa-solid fa-palette text-amber-500 text-base mb-1 block"></i>
+                                    <span class="text-xs font-bold block text-slate-800">Full Color</span>
+                                    <span id="rateLabelColor" class="text-[10px] text-slate-500">₹10 / पेज</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Print Sides -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">प्रिंट साइड (Print Sides)</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="printSides" value="single" checked onchange="calculatePrice()" class="peer hidden">
+                                <div class="p-2.5 border-2 border-slate-200 rounded-xl peer-checked:border-brand-600 peer-checked:bg-brand-50/40 text-center transition">
+                                    <span class="text-xs font-bold block text-slate-800">Single Sided</span>
+                                    <span class="text-[10px] text-slate-500">एक तरफा</span>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="printSides" value="double" onchange="calculatePrice()" class="peer hidden">
+                                <div class="p-2.5 border-2 border-slate-200 rounded-xl peer-checked:border-brand-600 peer-checked:bg-brand-50/40 text-center transition">
+                                    <span class="text-xs font-bold block text-slate-800">Double Sided</span>
+                                    <span id="rateLabelDouble" class="text-[10px] text-slate-500">दोनों तरफ</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Paper Size & Copies Grid -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">पेपर साइज़ (Paper)</label>
+                            <select id="paperSize" onchange="calculatePrice()" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-2 focus:ring-brand-500 outline-none">
+                                <option value="A4" selected>A4 (Standard)</option>
+                                <option value="A3">A3 (Large)</option>
+                                <option value="Photo">Photo Paper (4x6)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">कॉपी (Copies)</label>
+                            <div class="flex items-center border border-slate-300 rounded-xl bg-slate-50 overflow-hidden">
+                                <button onclick="adjustCopies(-1)" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs">-</button>
+                                <input type="number" id="copyCount" value="1" min="1" onchange="calculatePrice()" class="w-full text-center bg-transparent text-xs font-bold focus:outline-none">
+                                <button onclick="adjustCopies(1)" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Page Selection Options -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">पेज चुनाव (Pages to Print)</label>
+                        <select id="pageRangeType" onchange="handlePageRangeChange()" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-xs font-medium focus:ring-2 focus:ring-brand-500 outline-none">
+                            <option value="all">सभी पेज (All Pages)</option>
+                            <option value="custom">कस्टम रेंज (Custom Page Range)</option>
+                        </select>
+                        <input type="text" id="customPageInput" placeholder="Enter pages (e.g. 1, 3-5)" oninput="calculatePrice()" 
+                               class="hidden mt-2 w-full bg-slate-50 border border-slate-300 rounded-xl p-2 text-xs focus:ring-2 focus:ring-brand-500 outline-none">
+                    </div>
+
+                    <!-- Dynamic Price Summary Box -->
+                    <div class="bg-slate-900 text-white p-4 rounded-2xl space-y-2 mt-4 shadow-xl">
+                        <div class="flex justify-between text-xs text-slate-300">
+                            <span>दर (Rate per page):</span>
+                            <span id="ratePerPage" class="font-semibold">₹3.00</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-slate-300">
+                            <span>कुल पेज (Total calculated pages):</span>
+                            <span id="summaryPages" class="font-semibold">0 Pages</span>
+                        </div>
+                        <div class="border-t border-slate-800 pt-2.5 flex justify-between items-center">
+                            <span class="text-sm font-bold text-slate-100">कुल भुगतान (Total Payable):</span>
+                            <span id="totalPrice" class="text-2xl font-black text-brand-500">₹0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Submit & Pay Button -->
+                    <button id="payBtn" onclick="openPaymentModal()" disabled class="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-qrcode"></i>
+                        <span>पेमेंट करके प्रिंट निकालें (Pay & Print)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shop Admin & Rates Panel (Hidden by default, PIN protected) -->
+        <div id="adminView" class="hidden space-y-6">
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h2 class="text-lg font-bold text-slate-900">দुकानदार रेट कंट्रोल एवं डैशबोर्ड (Rates & Shop Admin)</h2>
+                        <span class="bg-brand-100 text-brand-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Unlocked</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-0.5">यहाँ से आप प्रिंट के रेट बदल सकते हैं, UPI ID सेट कर सकते हैं और पुराने ऑर्डर देख सकते हैं।</p>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <button onclick="closeAdminView()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-4 py-2 rounded-xl transition flex items-center space-x-2">
+                        <i class="fa-solid fa-xmark"></i>
+                        <span>एडमिन बंद करें (Exit Admin)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Buttons for Admin Panel -->
+            <div class="flex border-b border-slate-200 space-x-4">
+                <button id="tabRatesBtn" onclick="switchAdminTab('rates')" class="pb-2 text-sm font-bold border-b-2 border-brand-600 text-brand-600 flex items-center gap-2">
+                    <i class="fa-solid fa-indian-rupee-sign"></i> Rates & Prices Setting
+                </button>
+                <button id="tabQueueBtn" onclick="switchAdminTab('queue')" class="pb-2 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-list-check"></i> Print Orders Queue (<span id="queueCount">0</span>)
+                </button>
+            </div>
+
+            <!-- Tab 1: Rate Setting Form -->
+            <div id="tabRates" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <form onsubmit="saveRatesFromForm(event)" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        
+                        <!-- Rate Inputs -->
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                            <h3 class="text-xs font-bold uppercase text-slate-600 tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-print text-slate-500"></i> Base Page Rates (प्रति पेज रेट)
+                            </h3>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Black & White Rate (₹/Page)</label>
+                                <input type="number" step="0.5" id="inputRateBW" required class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Color Print Rate (₹/Page)</label>
+                                <input type="number" step="0.5" id="inputRateColor" required class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500">
+                            </div>
+                        </div>
+
+                        <!-- Paper Surcharges -->
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                            <h3 class="text-xs font-bold uppercase text-slate-600 tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-file text-slate-500"></i> Paper Type Extra Rate (₹)
+                            </h3>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">A3 Extra Charge (per page)</label>
+                                <input type="number" step="1" id="inputRateA3" required class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Photo Paper Extra Charge (per page)</label>
+                                <input type="number" step="1" id="inputRatePhoto" required class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Double-Sided Discount (%)</label>
+                                <input type="number" min="0" max="50" id="inputDiscountDouble" required class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500">
+                            </div>
+                        </div>
+
+                        <!-- Shop & UPI Details -->
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                            <h3 class="text-xs font-bold uppercase text-slate-600 tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-shop text-slate-500"></i> Shop & Payment Info
+                            </h3>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Shop Name (दुकान का नाम)</label>
+                                <input type="text" id="inputShopName" required class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Shop UPI ID (For PhonePe/GPay)</label>
+                                <input type="text" id="inputUpiId" required class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm font-mono font-bold outline-none focus:ring-2 focus:ring-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Admin Panel Security PIN</label>
+                                <input type="text" id="inputAdminPin" maxlength="6" required class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm font-mono font-bold outline-none focus:ring-2 focus:ring-brand-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end space-x-3 pt-2">
+                        <button type="button" onclick="resetRatesToDefault()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl transition">
+                            Reset to Default Rates
+                        </button>
+                        <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-6 py-2.5 rounded-xl shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-floppy-disk"></i> Save Rate Changes (रेट सुरक्षित करें)
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tab 2: Orders Queue -->
+            <div id="tabQueue" class="hidden space-y-4">
+                <div id="queueList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div id="emptyQueue" class="col-span-full bg-white p-12 rounded-2xl text-center border border-slate-200 text-slate-400">
+                        <i class="fa-solid fa-print text-4xl mb-3"></i>
+                        <p class="text-sm font-semibold text-slate-600">कोई भी पेंडिंग प्रिंट ऑर्डर नहीं है</p>
+                        <p class="text-xs mt-1">No pending orders right now.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- PIN Verification Modal -->
+    <div id="pinModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 text-center space-y-4 animate-fade-in">
+            <div class="w-12 h-12 bg-slate-100 text-slate-800 rounded-2xl flex items-center justify-center mx-auto">
+                <i class="fa-solid fa-lock text-xl"></i>
+            </div>
+            <div>
+                <h3 class="text-base font-bold text-slate-900">सुरक्षा PIN दर्ज करें</h3>
+                <p class="text-xs text-slate-500 mt-1">दुकानदार सेटिंग्स खोलने के लिए पिन लिखें (Default: 1234)</p>
+            </div>
+            <div>
+                <input type="password" id="pinInput" placeholder="Enter PIN" maxlength="6" 
+                       class="w-full text-center text-xl font-mono tracking-widest bg-slate-50 border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-brand-500 outline-none">
+            </div>
+            <div class="flex space-x-2">
+                <button onclick="closePinModal()" class="w-1/2 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl text-xs">Cancel</button>
+                <button onclick="verifyPin()" class="w-1/2 bg-slate-900 text-white font-bold py-2.5 rounded-xl text-xs">Unlock</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment & UPI Modal -->
+    <div id="paymentModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative animate-fade-in">
+            <!-- Modal Header -->
+            <div class="bg-slate-900 text-white p-4 flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-shield-halved text-brand-500"></i>
+                    <h3 class="font-bold text-sm">UPI भुगतान (Scan & Pay)</h3>
+                </div>
+                <button onclick="closePaymentModal()" class="text-slate-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="p-6 text-center space-y-4">
+                <div>
+                    <p class="text-xs text-slate-500">Payee UPI: <span id="displayUpiId" class="font-bold text-slate-800">cybercafe@upi</span></p>
+                    <h4 id="modalAmount" class="text-3xl font-black text-slate-900 mt-1">₹0.00</h4>
+                </div>
+
+                <!-- QR Code Box -->
+                <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 inline-block relative">
+                    <img id="qrCodeImg" src="" alt="UPI QR Code" class="w-44 h-44 mx-auto rounded-lg shadow-inner">
+                    <div class="mt-2 flex items-center justify-center space-x-1.5 text-[11px] text-slate-500">
+                        <i class="fa-solid fa-qrcode"></i>
+                        <span>Scan with PhonePe, Paytm, GooglePay</span>
+                    </div>
+                </div>
+
+                <!-- Instruction -->
+                <div class="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-xs text-left">
+                    <p class="font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-circle-info"></i> नोट:
+                    </p>
+                    <p class="mt-0.5">QR स्कैन करके पेमेंट करें। पेमेंट होने के बाद 'भुगतान पूरा हुआ' पर क्लिक करें।</p>
+                </div>
+
+                <!-- Simulate Payment Button -->
+                <button onclick="simulateSuccessfulPayment()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-circle-check text-base"></i>
+                    <span>भुगतान पूरा हुआ (Simulate Paid)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-auto no-print">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+            <p>© 2026 <span id="footerShopName">डिजिटल प्रिंट सेंटर</span> • Automated Kiosk & Online Printing Portal</p>
+        </div>
+    </footer>
+
+    <script>
+        // DEFAULT CONFIGURATION & RATES
+        const DEFAULT_SETTINGS = {
+            shopName: 'डिजिटल प्रिंट सेंटर',
+            upiId: 'cybercafe@upi',
+            adminPin: '1234',
+            rateBW: 3.00,
+            rateColor: 10.00,
+            rateA3Extra: 5.00,
+            ratePhotoExtra: 10.00,
+            doubleSidedDiscountPct: 10 // 10% discount
+        };
+
+        // Application State
+        let settings = { ...DEFAULT_SETTINGS };
+        let currentFile = null;
+        let filePages = 1;
+        let calculatedTotal = 0;
+        let printQueue = [];
+        let isAdminUnlocked = false;
+
+        // DOM Elements Cache
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+        const fileInfoBox = document.getElementById('fileInfoBox');
+        const fileName = document.getElementById('fileName');
+        const fileDetails = document.getElementById('fileDetails');
+        const emptyPreviewText = document.getElementById('emptyPreviewText');
+        const imagePreview = document.getElementById('imagePreview');
+        const pdfPreview = document.getElementById('pdfPreview');
+        const pdfName = document.getElementById('pdfName');
+        const pdfPages = document.getElementById('pdfPages');
+        const payBtn = document.getElementById('payBtn');
+
+        // Initial Load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+            updateUIFromSettings();
+        });
+
+        // Load Settings from LocalStorage
+        function loadSettings() {
+            const saved = localStorage.getItem('cyber_cafe_settings');
+            if (saved) {
+                try {
+                    settings = { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+                } catch(e) {
+                    settings = { ...DEFAULT_SETTINGS };
+                }
+            }
+        }
+
+        // Save Settings to LocalStorage
+        function saveSettings() {
+            localStorage.setItem('cyber_cafe_settings', JSON.stringify(settings));
+            updateUIFromSettings();
+            calculatePrice();
+        }
+
+        // Sync settings to UI labels and inputs
+        function updateUIFromSettings() {
+            document.getElementById('headerShopName').textContent = settings.shopName;
+            document.getElementById('footerShopName').textContent = settings.shopName;
+            
+            // Labels in customer mode
+            document.getElementById('rateLabelBW').textContent = `₹${settings.rateBW} / पेज`;
+            document.getElementById('rateLabelColor').textContent = `₹${settings.rateColor} / पेज`;
+            document.getElementById('rateLabelDouble').textContent = settings.doubleSidedDiscountPct > 0 
+                ? `दोनों तरफ (${settings.doubleSidedDiscountPct}% Off)` 
+                : 'दोनों तरफ';
+
+            // Populate Admin Form Inputs
+            document.getElementById('inputShopName').value = settings.shopName;
+            document.getElementById('inputUpiId').value = settings.upiId;
+            document.getElementById('inputAdminPin').value = settings.adminPin;
+            document.getElementById('inputRateBW').value = settings.rateBW;
+            document.getElementById('inputRateColor').value = settings.rateColor;
+            document.getElementById('inputRateA3').value = settings.rateA3Extra;
+            document.getElementById('inputRatePhoto').value = settings.ratePhotoExtra;
+            document.getElementById('inputDiscountDouble').value = settings.doubleSidedDiscountPct;
+        }
+
+        // File Selection Logic
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                processFile(file);
+            }
+        }
+
+        // Drag and drop handlers
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-brand-500', 'bg-brand-50/40');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-brand-500', 'bg-brand-50/40');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-brand-500', 'bg-brand-50/40');
+            if (e.dataTransfer.files.length > 0) {
+                processFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        function processFile(file) {
+            currentFile = file;
+            fileName.textContent = file.name;
+            
+            uploadPlaceholder.classList.add('hidden');
+            fileInfoBox.classList.remove('hidden');
+
+            const fileType = file.type;
+            const fileSize = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+
+            if (fileType.startsWith('image/')) {
+                filePages = 1;
+                fileDetails.textContent = `1 Page • ${fileSize}`;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.classList.remove('hidden');
+                    pdfPreview.classList.add('hidden');
+                    emptyPreviewText.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+
+            } else if (fileType === 'application/pdf') {
+                filePages = Math.floor(Math.random() * 3) + 1; // Simulated page count
+                fileDetails.textContent = `${filePages} Pages • ${fileSize}`;
+                
+                pdfName.textContent = file.name;
+                pdfPages.textContent = `${filePages} Pages Document`;
+                pdfPreview.classList.remove('hidden');
+                imagePreview.classList.add('hidden');
+                emptyPreviewText.classList.add('hidden');
+            } else {
+                alert('कृपया केवल इमेज (JPG, PNG) या PDF फ़ाइल अपलोड करें!');
+                removeFile();
+                return;
+            }
+
+            document.getElementById('pageCountBadge').textContent = `Total Pages: ${filePages}`;
+            payBtn.disabled = false;
+            calculatePrice();
+        }
+
+        function removeFile() {
+            currentFile = null;
+            filePages = 1;
+            fileInput.value = '';
+            
+            uploadPlaceholder.classList.remove('hidden');
+            fileInfoBox.classList.add('hidden');
+            
+            imagePreview.classList.add('hidden');
+            pdfPreview.classList.add('hidden');
+            emptyPreviewText.classList.remove('hidden');
+            
+            document.getElementById('pageCountBadge').textContent = `Total Pages: 0`;
+            payBtn.disabled = true;
+            calculatePrice();
+        }
+
+        function adjustCopies(delta) {
+            const input = document.getElementById('copyCount');
+            let val = parseInt(input.value) || 1;
+            val = Math.max(1, val + delta);
+            input.value = val;
+            calculatePrice();
+        }
+
+        function handlePageRangeChange() {
+            const type = document.getElementById('pageRangeType').value;
+            const customInput = document.getElementById('customPageInput');
+            if (type === 'custom') {
+                customInput.classList.remove('hidden');
+            } else {
+                customInput.classList.add('hidden');
+            }
+            calculatePrice();
+        }
+
+        // Price Calculation Engine based on dynamic settings
+        function calculatePrice() {
+            if (!currentFile) {
+                document.getElementById('ratePerPage').textContent = '₹0.00';
+                document.getElementById('summaryPages').textContent = '0 Pages';
+                document.getElementById('totalPrice').textContent = '₹0.00';
+                return;
+            }
+
+            const colorMode = document.querySelector('input[name="colorMode"]:checked').value;
+            const printSides = document.querySelector('input[name="printSides"]:checked').value;
+            const paperSize = document.getElementById('paperSize').value;
+            const copies = parseInt(document.getElementById('copyCount').value) || 1;
+            const pageRangeType = document.getElementById('pageRangeType').value;
+
+            let targetPages = filePages;
+
+            if (pageRangeType === 'custom') {
+                const customVal = document.getElementById('customPageInput').value.trim();
+                if (customVal) {
+                    const parts = customVal.split(',');
+                    let count = 0;
+                    parts.forEach(p => {
+                        if (p.includes('-')) {
+                            const [start, end] = p.split('-').map(Number);
+                            if (start && end && end >= start) count += (end - start + 1);
+                            else count += 1;
+                        } else if (p.trim()) {
+                            count += 1;
+                        }
+                    });
+                    targetPages = Math.min(filePages, Math.max(1, count));
+                }
+            }
+
+            // Calculate Base Rate
+            let baseRate = (colorMode === 'bw') ? settings.rateBW : settings.rateColor;
+
+            // Add Paper Size Extra Charges
+            if (paperSize === 'A3') baseRate += settings.rateA3Extra;
+            if (paperSize === 'Photo') baseRate += settings.ratePhotoExtra;
+
+            // Apply Double-Sided Discount
+            if (printSides === 'double' && settings.doubleSidedDiscountPct > 0) {
+                baseRate *= (1 - (settings.doubleSidedDiscountPct / 100));
+            }
+
+            const totalPagesToPrint = targetPages * copies;
+            calculatedTotal = Math.round(totalPagesToPrint * baseRate);
+
+            document.getElementById('ratePerPage').textContent = `₹${baseRate.toFixed(2)}`;
+            document.getElementById('summaryPages').textContent = `${totalPagesToPrint} Page(s)`;
+            document.getElementById('totalPrice').textContent = `₹${calculatedTotal}.00`;
+        }
+
+        // Payment Modal & QR Code Generation
+        function openPaymentModal() {
+            if (!currentFile || calculatedTotal <= 0) return;
+            
+            document.getElementById('displayUpiId').textContent = settings.upiId;
+            document.getElementById('modalAmount').textContent = `₹${calculatedTotal}.00`;
+            
+            const upiString = `upi://pay?pa=${encodeURIComponent(settings.upiId)}&pn=${encodeURIComponent(settings.shopName)}&am=${calculatedTotal}&cu=INR`;
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiString)}`;
+            document.getElementById('qrCodeImg').src = qrUrl;
+
+            document.getElementById('paymentModal').classList.remove('hidden');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentModal').classList.add('hidden');
+        }
+
+        function simulateSuccessfulPayment() {
+            closePaymentModal();
+
+            const order = {
+                id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
+                fileName: currentFile.name,
+                colorMode: document.querySelector('input[name="colorMode"]:checked').value.toUpperCase(),
+                paperSize: document.getElementById('paperSize').value,
+                sides: document.querySelector('input[name="printSides"]:checked').value,
+                copies: document.getElementById('copyCount').value,
+                amount: calculatedTotal,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+
+            printQueue.push(order);
+            updateAdminQueueUI();
+
+            alert(`✅ भुगतान सफल रहा! Order ID: ${order.id}\nआपका प्रिंट जॉब शुरू किया जा रहा है...`);
+            window.print();
+            removeFile();
+        }
+
+        // PIN Verification Logic
+        function requestAdminAccess() {
+            if (isAdminUnlocked) {
+                openAdminView();
+            } else {
+                document.getElementById('pinInput').value = '';
+                document.getElementById('pinModal').classList.remove('hidden');
+            }
+        }
+
+        function closePinModal() {
+            document.getElementById('pinModal').classList.add('hidden');
+        }
+
+        function verifyPin() {
+            const entered = document.getElementById('pinInput').value;
+            if (entered === settings.adminPin) {
+                isAdminUnlocked = true;
+                closePinModal();
+                openAdminView();
+            } else {
+                alert('❌ गलत पिन! (Incorrect PIN)');
+            }
+        }
+
+        function openAdminView() {
+            document.getElementById('customerView').classList.add('hidden');
+            document.getElementById('adminView').classList.remove('hidden');
+        }
+
+        function closeAdminView() {
+            document.getElementById('adminView').classList.add('hidden');
+            document.getElementById('customerView').classList.remove('hidden');
+        }
+
+        function switchAdminTab(tab) {
+            const tabRates = document.getElementById('tabRates');
+            const tabQueue = document.getElementById('tabQueue');
+            const btnRates = document.getElementById('tabRatesBtn');
+            const btnQueue = document.getElementById('tabQueueBtn');
+
+            if (tab === 'rates') {
+                tabRates.classList.remove('hidden');
+                tabQueue.classList.add('hidden');
+                btnRates.className = 'pb-2 text-sm font-bold border-b-2 border-brand-600 text-brand-600 flex items-center gap-2';
+                btnQueue.className = 'pb-2 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2';
+            } else {
+                tabRates.classList.add('hidden');
+                tabQueue.classList.remove('hidden');
+                btnQueue.className = 'pb-2 text-sm font-bold border-b-2 border-brand-600 text-brand-600 flex items-center gap-2';
+                btnRates.className = 'pb-2 text-sm font-bold border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2';
+            }
+        }
+
+        // Save Admin Form Rates
+        function saveRatesFromForm(e) {
+            e.preventDefault();
+            settings.shopName = document.getElementById('inputShopName').value.trim();
+            settings.upiId = document.getElementById('inputUpiId').value.trim();
+            settings.adminPin = document.getElementById('inputAdminPin').value.trim();
+            settings.rateBW = parseFloat(document.getElementById('inputRateBW').value) || 0;
+            settings.rateColor = parseFloat(document.getElementById('inputRateColor').value) || 0;
+            settings.rateA3Extra = parseFloat(document.getElementById('inputRateA3').value) || 0;
+            settings.ratePhotoExtra = parseFloat(document.getElementById('inputRatePhoto').value) || 0;
+            settings.doubleSidedDiscountPct = parseFloat(document.getElementById('inputDiscountDouble').value) || 0;
+
+            saveSettings();
+            alert('✅ नए रेट और सेटिंग्स सफलतापूर्वक सेव हो गई हैं!');
+            closeAdminView();
+        }
+
+        function resetRatesToDefault() {
+            if (confirm('क्या आप सचमुच डिफ़ॉल्ट रेट रीसेट करना चाहते हैं?')) {
+                settings = { ...DEFAULT_SETTINGS };
+                saveSettings();
+            }
+        }
+
+        // Queue UI Render
+        function updateAdminQueueUI() {
+            const queueList = document.getElementById('queueList');
+            const emptyQueue = document.getElementById('emptyQueue');
+            document.getElementById('queueCount').textContent = printQueue.length;
+
+            if (printQueue.length === 0) {
+                emptyQueue.classList.remove('hidden');
+                return;
+            } else {
+                emptyQueue.classList.add('hidden');
+            }
+
+            const oldItems = queueList.querySelectorAll('.queue-item');
+            oldItems.forEach(item => item.remove());
+
+            printQueue.forEach((order, index) => {
+                const card = document.createElement('div');
+                card.className = 'queue-item bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-4';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs font-bold bg-brand-100 text-brand-800 px-2.5 py-0.5 rounded-md">${order.id}</span>
+                            <span class="text-xs text-slate-400"><i class="fa-regular fa-clock mr-1"></i>${order.time}</span>
+                        </div>
+                        <h4 class="font-bold text-slate-800 text-sm truncate">${order.fileName}</h4>
+                        <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                            <div><span class="text-slate-400">Color:</span> <b>${order.colorMode}</b></div>
+                            <div><span class="text-slate-400">Size:</span> <b>${order.paperSize}</b></div>
+                            <div><span class="text-slate-400">Sides:</span> <b>${order.sides}</b></div>
+                            <div><span class="text-slate-400">Copies:</span> <b>${order.copies}</b></div>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-slate-100 flex justify-between items-center">
+                        <span class="font-black text-slate-900 text-base">₹${order.amount}</span>
+                        <button onclick="removeQueueOrder(${index})" class="bg-brand-600 hover:bg-brand-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold">
+                            Mark Completed
+                        </button>
+                    </div>
+                `;
+                queueList.appendChild(card);
+            });
+        }
+
+        function removeQueueOrder(index) {
+            printQueue.splice(index, 1);
+            updateAdminQueueUI();
+        }
+    </script>
+</body>
+</html>
